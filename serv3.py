@@ -1,6 +1,7 @@
 from flask import Flask, request, Response, stream_with_context
 import yt_dlp
 import requests
+import re  # Добавлено для использования re.search()
 
 app = Flask(__name__)
 
