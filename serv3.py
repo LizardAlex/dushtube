@@ -8,7 +8,7 @@ app = Flask(__name__)
 @app.route('/watch', methods=['GET'])
 def watch():
     video_id = request.args.get('v')
-    quality = request.args.get('quality', '22')  # Устанавливаем 
+    quality = request.args.get('quality', 'best')  # Устанавливаем 
     if not video_id:
         return "No video ID provided.", 400
 
