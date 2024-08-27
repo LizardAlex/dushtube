@@ -26,7 +26,7 @@ def watch():
             result = ydl.extract_info(video_url, download=False)
             formats = result.get('formats', [])
 
-            # Фильтруем форматы, оставляя только видео с аудио
+            # Фильтруем форматы, оставляя только те, которые содержат и видео, и аудио
             available_formats = {
                 fmt['format_id']: fmt
                 for fmt in formats
