@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dushtube Video Stream</title>
+</head>
+<body>
+    <h1>Watch YouTube Video via Dushtube</h1>
+    <form id="videoForm">
+        <label for="videoUrl">Enter Video ID:</label>
+        <input type="text" id="videoId" name="videoId" required placeholder="BSzSn-PRdtI">
+        <button type="submit">Watch Video</button>
+    </form>
+
+    <video id="videoPlayer" width="640" height="360" controls>
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        document.getElementById('videoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const videoId = document.getElementById('videoId').value;
+            const videoPlayer = document.getElementById('videoPlayer');
+
+            // Устанавливаем источник видео через сервер
+            videoPlayer.src = `/watch?v=${encodeURIComponent(videoId)}`;
+            videoPlayer.play();
+        });
+    </script>
+</body>
+</html>
