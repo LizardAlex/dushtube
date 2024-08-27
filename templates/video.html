@@ -22,7 +22,7 @@
         function loadVideo(quality) {
             const videoId = "{{ video_id }}";
             const videoSource = document.getElementById('videoSource');
-            videoSource.src = `/stream?v=${videoId}&quality=${quality}`;
+            videoSource.src = `/stream?v=${videoId}&quality=${quality}+bestaudio`;
             const videoPlayer = document.getElementById('videoPlayer');
             videoPlayer.load();
             videoPlayer.play();
