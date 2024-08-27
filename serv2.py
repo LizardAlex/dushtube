@@ -1,6 +1,7 @@
 from flask import Flask, request, send_file
 import yt_dlp
 import io
+import requests  # Импортируем requests
 
 app = Flask(__name__)
 
@@ -25,7 +26,11 @@ def watch():
             result = ydl.extract_info(video_url, download=False)
             video_stream_url = result['url']
 
-        return send_file(io.BytesIO(requests.get(video_stream_url).content),
+        # Используем requests для получения содержимого видеопотока
+        video_content = requests.get(video_stream_url).content
+
+        # Отправляем содержимое клиенту
+        return send_file(io.BytesIO(video_content),
                          as_attachment=False,
                          mimetype='video/mp4',
                          download_name='video.mp4')
