@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Video</title>
+</head>
+<body>
+    <h1>Смотреть видео</h1>
+    <video id="videoPlayer" controls width="640">
+        <source src="" id="videoSource" type="video/mp4">
+        Ваш браузер не поддерживает видео.
+    </video>
+    <div>
+        <h2>Выберите качество:</h2>
+        {% for format_id, format_info in available_formats.items() %}
+            <button onclick="loadVideo('{{ format_id }}')">{{ format_info['format'] }}</button>
+        {% endfor %}
+    </div>
+
+    <script>
+        function loadVideo(quality) {
+            const videoId = "{{ video_id }}";
+            const videoSource = document.getElementById('videoSource');
+            videoSource.src = `/stream?v=${videoId}&quality=${quality}`;
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.load();
+            videoPlayer.play();
+        }
+    </script>
+</body>
+</html>
