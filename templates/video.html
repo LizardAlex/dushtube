@@ -1,27 +1,51 @@
-<script>
-    let videoPlayer = document.getElementById('videoPlayer');
-    let videoSource = document.getElementById('videoSource');
-    let videoDuration = document.getElementById('videoDuration');
-    let savedDuration = "{{ duration }}";  // Получаем длительность из шаблона
-
-    function loadVideo(quality) {
-        const videoId = "{{ video_id }}";
-        const videoURL = `/stream?v=${videoId}&quality=${quality}`;
-        
-        videoPlayer.pause();
-        videoSource.src = videoURL;
-        videoPlayer.load();
-
-        // Обновляем длительность в плеере
-        videoPlayer.addEventListener('loadedmetadata', function() {
-            updateDuration(savedDuration);
-            videoPlayer.play();
-        }, { once: true });
-    }
-
-    function updateDuration(duration) {
-        const minutes = Math.floor(duration / 60);
-        const seconds = Math.floor(duration % 60);
-        videoDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-</script>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Смотреть видео</title>
+</head>
+<body>
+    <h1>Смотреть видео</h1>
+    <video id="videoPlayer" controls width="640">
+        <source src="" id="videoSource" type="video/mp4">
+        Ваш браузер не поддерживает видео.
+    </video>
+    <div>
+        <h2>Выберите качество:</h2>
+        {% for format_id, format_info in available_formats.items() %}
+            <button onclick="loadVideo('{{ format_id }}')">{{ format_info['format'] }}</button>
+        {% endfor %}
+    </div>
+    <div>
+        <p>Длительность видео: <span id="videoDuration">{{ duration // 60 }}:{{ '%02d' % (duration % 60) }}</span></p>
+    </div>
+    <script>
+        let videoPlayer = document.getElementById('videoPlayer');
+        let videoSource = document.getElementById('videoSource');
+        let videoDuration = document.getElementById('videoDuration');
+        let savedDuration = "{{ duration }}";  // Получаем длительность из шаблона
+    
+        function loadVideo(quality) {
+            const videoId = "{{ video_id }}";
+            const videoURL = `/stream?v=${videoId}&quality=${quality}`;
+            
+            videoPlayer.pause();
+            videoSource.src = videoURL;
+            videoPlayer.load();
+    
+            // Обновляем длительность в плеере
+            videoPlayer.addEventListener('loadedmetadata', function() {
+                updateDuration(savedDuration);
+                videoPlayer.play();
+            }, { once: true });
+        }
+    
+        function updateDuration(duration) {
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            videoDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
