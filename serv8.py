@@ -8,7 +8,7 @@ app = Flask(__name__)
 @app.route('/watch', methods=['GET'])
 def watch():
     video_id = request.args.get('v')
-    
+
     if not video_id:
         return "No video ID provided.", 400
 
@@ -26,9 +26,7 @@ def watch():
             result = ydl.extract_info(video_url, download=False)
             formats = result.get('formats', [])
             available_formats = {fmt['format_id']: fmt for fmt in formats}
-            
-            # Получаем длительность видео
-            duration = result.get('duration', 0)
+            duration = result.get('duration', 0)  # Получаем длительность видео
 
             return render_template('video.html', video_id=video_id, available_formats=available_formats, duration=duration)
 
@@ -56,6 +54,11 @@ def stream():
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             result = ydl.extract_info(video_url, download=False)
+
+            # Получаем длительность видео
+            duration = result.get('duration', 0)
+
+
             formats = result.get('formats', [])
             
             video_format = next((fmt for fmt in formats if fmt['format_id'] == quality and fmt.get('vcodec') != 'none'), None)
@@ -67,7 +70,10 @@ def stream():
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url'] if audio_format else None
 
-            return stream_video_with_audio_range(video_stream_url, audio_stream_url)
+
+
+            # Возвращаем поток с длительностью
+            return stream_video_with_audio_range(video_stream_url, audio_stream_url, duration)
 
     except Exception as e:
         print(f"Error during streaming: {str(e)}")
