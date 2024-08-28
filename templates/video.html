@@ -26,10 +26,11 @@
         let videoSource = document.getElementById('videoSource');
         let videoDuration = document.getElementById('videoDuration');
         let savedDuration = null; // Переменная для сохранения длительности
+        let savedDuration2 = "{{ duration }}";
 
         function loadVideo(quality) {
             const videoId = "{{ video_id }}";
-            const videoURL = `/stream?v=${videoId}&quality=${quality}`;
+            const videoURL = `/stream?v=${videoId}&quality=${quality}&duration=${savedDuration2}`;
             
             videoPlayer.pause();
             videoSource.src = videoURL;

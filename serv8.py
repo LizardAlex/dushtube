@@ -38,6 +38,7 @@ def watch():
 def stream():
     video_id = request.args.get('v')
     quality = request.args.get('quality', 'best')
+    duration = request.args.get('duration', 5)
 
     if not video_id:
         return "No video ID provided.", 400
@@ -54,9 +55,6 @@ def stream():
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             result = ydl.extract_info(video_url, download=False)
-
-            # Получаем длительность видео
-            duration = result.get('duration', 0)
 
 
             formats = result.get('formats', [])
