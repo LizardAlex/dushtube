@@ -25,6 +25,7 @@
         let videoPlayer = document.getElementById('videoPlayer');
         let videoSource = document.getElementById('videoSource');
         let videoDuration = document.getElementById('videoDuration');
+        let savedDuration = null; // Переменная для сохранения длительности
     
         function loadVideo(quality) {
             const videoId = "{{ video_id }}";
@@ -36,25 +37,15 @@
     
             // Обновляем длительность, когда метаданные загружены
             videoPlayer.addEventListener('loadedmetadata', function() {
-                updateDuration();
+                if (savedDuration === null) {
+                    savedDuration = videoPlayer.duration; // Сохраняем длительность при первом получении
+                }
+                updateDuration(savedDuration);
                 videoPlayer.play();
             }, { once: true });
-    
-            // Получаем длительность из заголовка
-            fetch(videoURL)
-                .then(response => {
-                    const duration = response.headers.get('X-Video-Duration');
-                    if (duration) {
-                        const minutes = Math.floor(duration / 60);
-                        const seconds = duration % 60;
-                        videoDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                    }
-                })
-                .catch(error => console.error('Error fetching video duration:', error));
         }
     
-        function updateDuration() {
-            const duration = videoPlayer.duration;
+        function updateDuration(duration) {
             const minutes = Math.floor(duration / 60);
             const seconds = Math.floor(duration % 60);
             videoDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
