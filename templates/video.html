@@ -46,6 +46,7 @@
         }
 
         function updateDuration(duration) {
+            if (!savedDuration) savedDuration = duration; 
             const minutes = Math.floor(duration / 60);
             const seconds = Math.floor(duration % 60);
             videoDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
