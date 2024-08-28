@@ -1,17 +1,16 @@
+import subprocess
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
-import subprocess
-import json
 
 app = Flask(__name__)
 
-# Глобальный словарь для хранения длительности видео
-video_durations = {}
+# Массив основных разрешений
+DESIRED_RESOLUTIONS = [360, 480, 720, 1080, 1440, 2160]  # Соответствует 360p, 480p, 720p, 1080p, 2K, 4K
 
 @app.route('/watch', methods=['GET'])
 def watch():
     video_id = request.args.get('v')
-    
+
     if not video_id:
         return "No video ID provided.", 400
 
@@ -28,13 +27,11 @@ def watch():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             result = ydl.extract_info(video_url, download=False)
             formats = result.get('formats', [])
-            available_formats = {fmt['format_id']: fmt for fmt in formats}
-            
-            # Получаем длительность видео
-            duration = result.get('duration', 0)
-            video_durations[video_id] = duration  # Сохраняем длительность в глобальном словаре
 
-            return render_template('video.html', video_id=video_id, available_formats=available_formats, duration=duration)
+            # Фильтрация форматов по основным разрешениям
+            filtered_formats = {fmt['format_id']: fmt for fmt in formats if fmt.get('height') in DESIRED_RESOLUTIONS}
+
+            return render_template('video.html', video_id=video_id, available_formats=filtered_formats)
 
     except Exception as e:
         print(f"Error during fetching video info: {str(e)}")
@@ -48,24 +45,18 @@ def stream():
     if not video_id:
         return "No video ID provided.", 400
 
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+
     try:
         print(f"Requesting video stream for quality: {quality}")
 
-        # Получаем сохраненную длительность
-        duration = video_durations.get(video_id, 0)
-
-        # Если длительность не найдена, возвращаем ошибку
-        if duration == 0:
-            return "Video duration not available.", 404
-
-        # Получаем информацию о формате
         ydl_opts = {
             'noplaylist': True,
             'quiet': True,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+            result = ydl.extract_info(video_url, download=False)
             formats = result.get('formats', [])
             
             video_format = next((fmt for fmt in formats if fmt['format_id'] == quality and fmt.get('vcodec') != 'none'), None)
@@ -75,49 +66,72 @@ def stream():
                 return "Requested video format not available.", 404
 
             video_stream_url = video_format['url']
-            audio_stream_url = audio_format['url'] if audio_format else None
 
-            return stream_video_with_audio_range(video_stream_url, audio_stream_url, duration)
+            if not audio_format:
+                return stream_video(video_stream_url)
+
+            audio_stream_url = audio_format['url']
+
+            return stream_video_with_audio(video_stream_url, audio_stream_url)
 
     except Exception as e:
         print(f"Error during streaming: {str(e)}")
         return f"Error: {str(e)}", 500
 
-def stream_video_with_audio_range(video_url, audio_url, duration):
+def stream_video(url):
+    range_header = request.headers.get('Range', None)
+    headers = {}
+
+    if range_header:
+        headers['Range'] = range_header
+
+    def generate():
+        with requests.get(url, headers=headers, stream=True) as r:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
+
+    return Response(stream_with_context(generate()), headers=headers, content_type='video/mp4')
+
+def stream_video_with_audio(video_url, audio_url):
+    range_header = request.headers.get('Range', None)
+    
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', video_url,
-        '-i', audio_url if audio_url else 'anullsrc=r=44100:cl=stereo',
+        '-i', audio_url,
         '-c:v', 'copy',
         '-c:a', 'aac',
         '-strict', 'experimental',
         '-bsf:a', 'aac_adtstoasc',
         '-f', 'mp4',
         '-movflags', 'frag_keyframe+empty_moov+faststart',
-        '-t', str(duration),  # Устанавливаем длительность
         'pipe:1'
     ]
 
+    if range_header:
+        # Добавление Range заголовка для поддержки перемотки
+        start, end = 0, None
+        match = re.search(r'bytes=(\d+)-(\d*)', range_header)
+        if match:
+            start = int(match.group(1))
+            if match.group(2):
+                end = int(match.group(2))
+            ffmpeg_cmd.insert(1, '-ss')
+            ffmpeg_cmd.insert(2, str(start / 1000))
+
     def generate():
         process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        try:
-            while True:
-                data = process.stdout.read(1024)
-                if not data:
-                    break
-                yield data
-        finally:
-            process.stdout.close()
-            process.wait()
+        while True:
+            data = process.stdout.read(1024)
+            if not data:
+                break
+            yield data
 
-    response = Response(stream_with_context(generate()), content_type='video/mp4')
-    print(f"Eqwdqwing: {duration}")
-    
-    # Установите длительность в заголовке
-    response.headers['X-Video-Duration'] = str(duration)
-    response.headers['Content-Length'] = str(duration)  # Устанавливаем длительность в Content-Length (если необходимо)
+        process.stdout.close()
+        process.wait()
 
-    return response
+    return Response(stream_with_context(generate()), content_type='video/mp4')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
