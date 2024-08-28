@@ -1,7 +1,7 @@
 import subprocess
-from flask import Flask, request, render_template, Response
+from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
-import os
+import requests
 
 app = Flask(__name__)
 
@@ -69,19 +69,30 @@ def stream():
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url']
 
-            # Сначала объединяем видео и аудио в один файл
-            output_file = f"/tmp/{video_id}_{quality}.mp4"
-            if not os.path.exists(output_file):
-                combine_video_audio(video_stream_url, audio_stream_url, output_file)
-
-            # Теперь стримим объединенный файл
-            return stream_combined_file(output_file, result['duration'])
+            return stream_video_with_audio(video_stream_url, audio_stream_url, result['duration'])
 
     except Exception as e:
         print(f"Error during streaming: {str(e)}")
         return f"Error: {str(e)}", 500
 
-def combine_video_audio(video_url, audio_url, output_file):
+def stream_video(video_url, duration):
+    def generate():
+        with requests.get(video_url, stream=True) as r:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
+
+    headers = {
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+        'Content-Duration': str(duration),
+    }
+    
+    return Response(stream_with_context(generate()), headers=headers)
+
+def stream_video_with_audio(video_url, audio_url, duration):
+    range_header = request.headers.get('Range', None)
+
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', video_url,
@@ -91,29 +102,37 @@ def combine_video_audio(video_url, audio_url, output_file):
         '-strict', 'experimental',
         '-bsf:a', 'aac_adtstoasc',
         '-f', 'mp4',
-        '-movflags', 'faststart',
-        output_file
+        '-movflags', 'frag_keyframe+empty_moov+faststart',
+        'pipe:1'
     ]
-    
-    subprocess.run(ffmpeg_cmd, check=True)
 
-def stream_combined_file(file_path, duration):
+    if range_header:
+        # Обработка Range-запросов
+        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+        if range_match:
+            start = range_match.group(1)
+            end = range_match.group(2)
+            ffmpeg_cmd.extend(['-ss', start])
+            if end:
+                ffmpeg_cmd.extend(['-t', str(int(end) - int(start))])
+
     def generate():
-        with open(file_path, 'rb') as f:
-            while True:
-                chunk = f.read(1024)
-                if not chunk:
-                    break
-                yield chunk
+        process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        while True:
+            data = process.stdout.read(1024)
+            if not data:
+                break
+            yield data
 
-    file_size = os.path.getsize(file_path)
+        process.stdout.close()
+        process.wait()
+
     headers = {
-        'Content-Length': str(file_size),
-        'Content-Duration': str(duration),
         'Content-Type': 'video/mp4',
-        'Accept-Ranges': 'bytes'
+        'Accept-Ranges': 'bytes',
+        'Content-Duration': str(duration),
     }
-    
+
     return Response(stream_with_context(generate()), headers=headers)
 
 if __name__ == '__main__':
