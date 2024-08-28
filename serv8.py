@@ -46,7 +46,7 @@ def stream():
     video_url = f"https://www.youtube.com/watch?v={video_id}"
 
     try:
-        print(f"Requesting video stream for quality: {quality}")
+        print(f"Requesting video stream for quality: {quality} duration: {duration}")
 
         ydl_opts = {
             'noplaylist': True,
