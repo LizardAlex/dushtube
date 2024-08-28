@@ -33,9 +33,11 @@
             videoPlayer.pause();
             videoSource.src = videoURL;
             videoPlayer.load();
-            videoPlayer.addEventListener('loadeddata', function() {
-                videoPlayer.play();
+
+            // Обновляем длительность, когда метаданные загружены
+            videoPlayer.addEventListener('loadedmetadata', function() {
                 updateDuration();
+                videoPlayer.play();
             }, { once: true });
         }
 
