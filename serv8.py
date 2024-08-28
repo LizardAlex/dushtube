@@ -107,7 +107,6 @@ def stream_video_with_audio(video_url, audio_url, duration):
     ]
 
     if range_header:
-        # Обработка Range-запросов
         range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
         if range_match:
             start = range_match.group(1)
@@ -126,6 +125,10 @@ def stream_video_with_audio(video_url, audio_url, duration):
 
         process.stdout.close()
         process.wait()
+
+        # Добавляем вывод ошибок ffmpeg
+        stderr = process.stderr.read().decode('utf-8')
+        print(f"FFmpeg stderr: {stderr}")
 
     headers = {
         'Content-Type': 'video/mp4',
