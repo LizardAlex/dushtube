@@ -100,19 +100,23 @@ def stream_video_with_audio_range(video_url, audio_url, duration):
 
     def generate():
         process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        while True:
-            data = process.stdout.read(1024)
-            if not data:
-                break
-            yield data
-
-        process.stdout.close()
-        process.wait()
+        try:
+            while True:
+                data = process.stdout.read(1024)
+                if not data:
+                    break
+                yield data
+        finally:
+            process.stdout.close()
+            process.wait()
 
     response = Response(stream_with_context(generate()), content_type='video/mp4')
+    print(f"Eqwdqwing: {duration}")
     
-    # Передаем длительность в заголовке
-    response.headers['X-Video-Duration'] = str(duration)  
+    # Установите длительность в заголовке
+    response.headers['X-Video-Duration'] = str(duration)
+    response.headers['Content-Length'] = str(duration)  # Устанавливаем длительность в Content-Length (если необходимо)
+
     return response
 
 if __name__ == '__main__':
