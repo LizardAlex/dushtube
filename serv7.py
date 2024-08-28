@@ -2,6 +2,7 @@ import subprocess
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
 import requests
+import re
 
 app = Flask(__name__)
 
@@ -55,11 +56,6 @@ def stream():
             result = ydl.extract_info(video_url, download=False)
             formats = result.get('formats', [])
             
-            # Диагностика форматов
-            print("Available formats:")
-            for fmt in formats:
-                print(f"Format ID: {fmt['format_id']}, vcodec: {fmt.get('vcodec', 'none')}, acodec: {fmt.get('acodec', 'none')}")
-
             # Найти видео и аудио потоки
             video_format = next(fmt for fmt in formats if fmt['format_id'] == quality and fmt.get('vcodec') != 'none')
             audio_format = next(fmt for fmt in formats if fmt.get('acodec') != 'none' and fmt.get('vcodec') == 'none')
@@ -67,12 +63,13 @@ def stream():
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url']
 
-            # Использование ffmpeg для объединения потоков на лету
+            # Использование ffmpeg для объединения потоков на лету с фильтром
             ffmpeg_cmd = [
                 'ffmpeg',
                 '-i', video_stream_url,
                 '-i', audio_stream_url,
                 '-c', 'copy',
+                '-bsf:a', 'aac_adtstoasc',  # Добавление фильтра для исправления аудиопотока
                 '-f', 'mp4',
                 '-movflags', 'frag_keyframe+empty_moov',
                 'pipe:1'
