@@ -38,7 +38,7 @@ def watch():
 def stream():
     video_id = request.args.get('v')
     quality = request.args.get('quality', 'best')
-    duration = request.args.get('duration', 5)
+    duration = request.args.get('duration', '5')
 
     if not video_id:
         return "No video ID provided.", 400
