@@ -2,7 +2,6 @@ import subprocess
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
 import requests
-import re
 
 app = Flask(__name__)
 
@@ -56,9 +55,14 @@ def stream():
             result = ydl.extract_info(video_url, download=False)
             formats = result.get('formats', [])
             
+            # Диагностика форматов
+            print("Available formats:")
+            for fmt in formats:
+                print(f"Format ID: {fmt['format_id']}, vcodec: {fmt.get('vcodec', 'none')}, acodec: {fmt.get('acodec', 'none')}")
+
             # Найти видео и аудио потоки
-            video_format = next(fmt for fmt in formats if fmt['format_id'] == quality and fmt['vcodec'] != 'none')
-            audio_format = next(fmt for fmt in formats if fmt['acodec'] != 'none' and fmt['vcodec'] == 'none')
+            video_format = next(fmt for fmt in formats if fmt['format_id'] == quality and fmt.get('vcodec') != 'none')
+            audio_format = next(fmt for fmt in formats if fmt.get('acodec') != 'none' and fmt.get('vcodec') == 'none')
 
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url']
