@@ -1,8 +1,6 @@
 import subprocess
-import re
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
-import requests
 
 app = Flask(__name__)
 
@@ -63,7 +61,6 @@ def stream():
                 return "Requested video format not available.", 404
 
             if not audio_format:
-                # Если нет отдельного аудио потока, возвращаем только видео
                 video_stream_url = video_format['url']
                 return stream_video(video_stream_url, result['duration'])
 
@@ -76,39 +73,7 @@ def stream():
         print(f"Error during streaming: {str(e)}")
         return f"Error: {str(e)}", 500
 
-def stream_video(url, duration):
-    range_header = request.headers.get('Range', None)
-
-    headers = {
-        'Content-Type': 'video/mp4',
-        'Accept-Ranges': 'bytes',
-    }
-
-    if range_header:
-        match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if match:
-            start = int(match.group(1))
-            end = int(match.group(2)) if match.group(2) else None
-            headers['Content-Range'] = f'bytes {start}-{end}/{duration}'
-            headers['Content-Length'] = str(end - start + 1 if end else duration - start)
-            status_code = 206
-        else:
-            return "Invalid Range Header", 416
-    else:
-        start = 0
-        status_code = 200
-
-    def generate():
-        with requests.get(url, headers={'Range': f'bytes={start}-'}, stream=True) as r:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:
-                    yield chunk
-
-    return Response(stream_with_context(generate()), headers=headers, status=status_code)
-
 def stream_video_with_audio(video_url, audio_url, duration):
-    range_header = request.headers.get('Range', None)
-
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', video_url,
@@ -119,26 +84,8 @@ def stream_video_with_audio(video_url, audio_url, duration):
         '-bsf:a', 'aac_adtstoasc',
         '-f', 'mp4',
         '-movflags', 'frag_keyframe+empty_moov+faststart',
-        'pipe:1'
+        '-'
     ]
-
-    headers = {
-        'Content-Type': 'video/mp4',
-        'Accept-Ranges': 'bytes',
-    }
-
-    if range_header:
-        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if range_match:
-            start = int(range_match.group(1))
-            ffmpeg_cmd.extend(['-ss', str(start / 1000)])  # перемотка на указанное время
-            headers['Content-Range'] = f'bytes {start}-{duration}'
-            headers['Content-Length'] = str(duration - start)
-            status_code = 206
-        else:
-            return "Invalid Range Header", 416
-    else:
-        status_code = 200
 
     def generate():
         process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -154,9 +101,13 @@ def stream_video_with_audio(video_url, audio_url, duration):
         stderr = process.stderr.read().decode('utf-8')
         print(f"FFmpeg stderr: {stderr}")
 
-    headers['Content-Duration'] = str(duration)
+    headers = {
+        'Content-Type': 'video/mp4',
+        'Content-Length': str(duration),
+        'Accept-Ranges': 'bytes'
+    }
 
-    return Response(stream_with_context(generate()), headers=headers, status=status_code)
+    return Response(stream_with_context(generate()), headers=headers)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
