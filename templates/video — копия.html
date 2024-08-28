@@ -19,20 +19,21 @@
     </div>
 
     <script>
-        let videoPlayer = document.getElementById('videoPlayer');
-        let videoSource = document.getElementById('videoSource');
-
         function loadVideo(quality) {
             const videoId = "{{ video_id }}";
-            const videoURL = `/stream?v=${videoId}&quality=${quality}`;
-            
-            videoPlayer.pause();
-            videoSource.src = videoURL;
+            const videoSource = document.getElementById('videoSource');
+            const videoPlayer = document.getElementById('videoPlayer');
+    
+            videoSource.src = `/stream?v=${videoId}&quality=${quality}`;
+    
+            // Удалим play() из этого места и добавим событие для воспроизведения после загрузки
             videoPlayer.load();
-            videoPlayer.addEventListener('loadeddata', function() {
+    
+            videoPlayer.oncanplay = function() {
                 videoPlayer.play();
-            }, { once: true });
+            };
         }
     </script>
+    
 </body>
 </html>
