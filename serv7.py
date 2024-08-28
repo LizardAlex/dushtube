@@ -81,6 +81,12 @@ def stream():
                     if not data:
                         break
                     yield data
+                
+                # Захват ошибок ffmpeg, если они есть
+                stderr = process.stderr.read().decode()
+                if stderr:
+                    print(f"FFmpeg error: {stderr}")
+                
                 process.stdout.close()
                 process.wait()
 
