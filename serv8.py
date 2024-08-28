@@ -61,32 +61,30 @@ def stream():
             if not video_format:
                 return "Requested video format not available.", 404
 
-            if not audio_format:
-                video_stream_url = video_format['url']
-                return stream_video(video_stream_url, result['duration'])
-
             video_stream_url = video_format['url']
-            audio_stream_url = audio_format['url']
+            audio_stream_url = audio_format['url'] if audio_format else None
 
-            return stream_video_with_audio(video_stream_url, audio_stream_url, result['duration'])
+            return stream_video_with_audio(video_stream_url, audio_stream_url)
 
     except Exception as e:
         print(f"Error during streaming: {str(e)}")
         return f"Error: {str(e)}", 500
 
-def stream_video_with_audio(video_url, audio_url, duration):
+def stream_video_with_audio(video_url, audio_url):
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', video_url,
-        '-i', audio_url,
         '-c:v', 'copy',
-        '-c:a', 'aac',
-        '-strict', 'experimental',
-        '-bsf:a', 'aac_adtstoasc',
+    ]
+
+    if audio_url:
+        ffmpeg_cmd.extend(['-i', audio_url, '-c:a', 'aac', '-strict', 'experimental', '-bsf:a', 'aac_adtstoasc'])
+
+    ffmpeg_cmd.extend([
         '-f', 'mp4',
         '-movflags', 'frag_keyframe+empty_moov+faststart',
-        '-'
-    ]
+        'pipe:1'
+    ])
 
     def generate():
         process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -104,8 +102,7 @@ def stream_video_with_audio(video_url, audio_url, duration):
 
     headers = {
         'Content-Type': 'video/mp4',
-        'Accept-Ranges': 'bytes',
-        'Content-Length': str(duration),
+        'Accept-Ranges': 'bytes'
     }
 
     return Response(stream_with_context(generate()), headers=headers)
