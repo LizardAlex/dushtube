@@ -18,12 +18,13 @@
         {% endfor %}
     </div>
     <div>
-        <p>Длительность видео: {{ duration // 60 }}:{{ '%02d' % (duration % 60) }}</p>
+        <p>Длительность видео: <span id="videoDuration">{{ duration // 60 }}:{{ '%02d' % (duration % 60) }}</span></p>
     </div>
 
     <script>
         let videoPlayer = document.getElementById('videoPlayer');
         let videoSource = document.getElementById('videoSource');
+        let videoDuration = document.getElementById('videoDuration');
 
         function loadVideo(quality) {
             const videoId = "{{ video_id }}";
@@ -34,7 +35,15 @@
             videoPlayer.load();
             videoPlayer.addEventListener('loadeddata', function() {
                 videoPlayer.play();
+                updateDuration();
             }, { once: true });
+        }
+
+        function updateDuration() {
+            const duration = videoPlayer.duration;
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            videoDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
     </script>
 </body>
