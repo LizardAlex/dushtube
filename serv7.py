@@ -2,7 +2,6 @@ import subprocess
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
 import requests
-import re
 
 app = Flask(__name__)
 
@@ -63,13 +62,14 @@ def stream():
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url']
 
-            # Использование ffmpeg для объединения потоков на лету с фильтром
+            # Использование ffmpeg для объединения потоков на лету с опцией faststart
             ffmpeg_cmd = [
                 'ffmpeg',
                 '-i', video_stream_url,
                 '-i', audio_stream_url,
                 '-c', 'copy',
-                '-bsf:a', 'aac_adtstoasc',  # Добавление фильтра для исправления аудиопотока
+                '-bsf:a', 'aac_adtstoasc',  # Фильтр для исправления аудиопотока
+                '-movflags', '+faststart',   # Ускорение старта видео
                 '-f', 'mp4',
                 '-movflags', 'frag_keyframe+empty_moov',
                 'pipe:1'
@@ -82,11 +82,6 @@ def stream():
                     if not data:
                         break
                     yield data
-                
-                # Захват ошибок ffmpeg, если они есть
-                stderr = process.stderr.read().decode()
-                if stderr:
-                    print(f"FFmpeg error: {stderr}")
                 
                 process.stdout.close()
                 process.wait()
