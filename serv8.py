@@ -117,7 +117,7 @@ def stream_video_with_audio_range(video_url, audio_url, duration):
 
     # Возвращаем Response с длительностью
     response = Response(stream_with_context(generate()), content_type='video/mp4')
-    response.headers['X-Video-Duration'] = str(duration)  # Добавляем длительность в заголовок
+    response.headers['X-Video-Duration'] = str(800)  # Добавляем длительность в заголовок
     return response
 
 if __name__ == '__main__':
