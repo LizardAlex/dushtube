@@ -1,6 +1,7 @@
 import subprocess
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
+import requests
 
 app = Flask(__name__)
 
@@ -103,8 +104,8 @@ def stream_video_with_audio(video_url, audio_url, duration):
 
     headers = {
         'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
         'Content-Length': str(duration),
-        'Accept-Ranges': 'bytes'
     }
 
     return Response(stream_with_context(generate()), headers=headers)
