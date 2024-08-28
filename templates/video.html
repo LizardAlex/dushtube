@@ -26,7 +26,7 @@
         let videoSource = document.getElementById('videoSource');
         let videoDuration = document.getElementById('videoDuration');
         let savedDuration = null; // Переменная для сохранения длительности
-    
+
         function loadVideo(quality) {
             const videoId = "{{ video_id }}";
             const videoURL = `/stream?v=${videoId}&quality=${quality}`;
@@ -34,17 +34,16 @@
             videoPlayer.pause();
             videoSource.src = videoURL;
             videoPlayer.load();
-    
+
             // Обновляем длительность, когда метаданные загружены
             videoPlayer.addEventListener('loadedmetadata', function() {
-                if (savedDuration === null) {
-                    savedDuration = videoPlayer.duration; // Сохраняем длительность при первом получении
-                }
+                // Обновляем длительность в плеере
+                if (!savedDuration) savedDuration = videoPlayer.duration; // Сохраняем длительность
                 updateDuration(savedDuration);
                 videoPlayer.play();
             }, { once: true });
         }
-    
+
         function updateDuration(duration) {
             const minutes = Math.floor(duration / 60);
             const seconds = Math.floor(duration % 60);
