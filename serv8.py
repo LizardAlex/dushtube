@@ -65,13 +65,17 @@ def stream():
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url'] if audio_format else None
 
-            return stream_video_with_audio_range(video_stream_url, audio_stream_url)
+            # Получаем длительность видео
+            duration = result.get('duration', 0)
+
+            # Возвращаем поток с длительностью
+            return stream_video_with_audio_range(video_stream_url, audio_stream_url, duration)
 
     except Exception as e:
         print(f"Error during streaming: {str(e)}")
         return f"Error: {str(e)}", 500
 
-def stream_video_with_audio_range(video_url, audio_url):
+def stream_video_with_audio_range(video_url, audio_url, duration):
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', video_url,
@@ -109,7 +113,10 @@ def stream_video_with_audio_range(video_url, audio_url):
                 ffmpeg_cmd.insert(3, '-to')
                 ffmpeg_cmd.insert(4, str(end))
 
-    return Response(stream_with_context(generate()), content_type='video/mp4')
+    # Возвращаем Response с длительностью
+    response = Response(stream_with_context(generate()), content_type='video/mp4')
+    response.headers['X-Video-Duration'] = str(duration)  # Добавляем длительность в заголовок
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
