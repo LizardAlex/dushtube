@@ -1,6 +1,7 @@
 import subprocess
 from flask import Flask, request, render_template, Response, stream_with_context
 import yt_dlp
+import requests
 
 app = Flask(__name__)
 
@@ -63,27 +64,27 @@ def stream():
             if not audio_format:
                 # Если нет отдельного аудио потока, возвращаем только видео
                 video_stream_url = video_format['url']
-                return stream_video(video_stream_url)
+                return stream_video(video_stream_url, result['duration'])
 
             video_stream_url = video_format['url']
             audio_stream_url = audio_format['url']
 
-            return stream_video_with_audio(video_stream_url, audio_stream_url)
+            return stream_video_with_audio(video_stream_url, audio_stream_url, result['duration'])
 
     except Exception as e:
         print(f"Error during streaming: {str(e)}")
         return f"Error: {str(e)}", 500
 
-def stream_video(url):
+def stream_video(url, duration):
     def generate():
         with requests.get(url, stream=True) as r:
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
                     yield chunk
 
-    return Response(stream_with_context(generate()), content_type='video/mp4')
+    return Response(stream_with_context(generate()), headers={'Content-Duration': str(duration)}, content_type='video/mp4')
 
-def stream_video_with_audio(video_url, audio_url):
+def stream_video_with_audio(video_url, audio_url, duration):
     # Объединение видео и аудио потоков с помощью ffmpeg
     ffmpeg_cmd = [
         'ffmpeg',
@@ -109,7 +110,7 @@ def stream_video_with_audio(video_url, audio_url):
         process.stdout.close()
         process.wait()
 
-    return Response(stream_with_context(generate()), content_type='video/mp4')
+    return Response(stream_with_context(generate()), headers={'Content-Duration': str(duration)}, content_type='video/mp4')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
